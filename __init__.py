@@ -31,8 +31,45 @@ def mongraphique():
 @app.route("/historigramme/")
 def historigramme():
     return render_template("historigramme.html")
-@app.route("/commits/")
+@app.route('/commits/')
 def commits():
+    # URL de l'API GitHub
+    api_url = "https://api.github.com/repos/OpenRSI/5MCSI_Metriques/commits"
+
+    # Récupérer les données des commits
+    response = urlopen(api_url)
+    commits_data = json.loads(response.read().decode('utf-8'))
+
+    # Extraire les minutes des dates des commits
+    commit_minutes = []
+    for commit in commits_data:
+        try:
+            date_string = commit['commit']['author']['date']
+            date_object = datetime.strptime(date_string, '%Y-%m-%dT%H:%M:%SZ')
+            commit_minutes.append(date_object.minute)
+        except KeyError:
+            continue  # Ignorer les commits malformés
+
+    # Compter les commits minute par minute
+    commit_counts = Counter(commit_minutes)
+
+    # Générer un graphique
+    minutes = list(range(60))
+    counts = [commit_counts.get(minute, 0) for minute in minutes]
+
+    plt.figure(figsize=(10, 6))
+    plt.bar(minutes, counts, color='skyblue')
+    plt.title("Nombre de commits par minute")
+    plt.xlabel("Minutes")
+    plt.ylabel("Nombre de commits")
+    plt.xticks(range(0, 60, 5))
+    plt.grid(axis='y')
+
+    # Sauvegarde du graphique
+    plt.savefig('static/commits_graph.png')
+    plt.close()
+
+    # Retourner la page HTML
     return render_template("commits.html")
 
 if __name__ == "__main__":
